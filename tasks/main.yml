@@ -1,0 +1,77 @@
+- name: Create config dir
+  file:
+    path: "{{ alertmanager_config_dir }}"
+    state: directory
+    mode: 0700
+
+# - name: Create template dir
+#   file:
+#     path: "{{ alertmanager_config_dir }}/templates"
+#     state: directory
+#     mode: 0755
+
+- name: Create docker network
+  docker_network:
+    name: prometheus
+
+- name: Copy alertmanager config
+  template:
+    src: alertmanager.yml
+    dest: "{{ alertmanager_config_dir}}/alertmanager.yml"
+    mode: 0644
+  register: _alertmanager_config
+
+# - name: Copy alertmanager template
+#   copy:
+#     src: alertmanager.tmpl
+#     dest: "{{ alertmanager_config_dir}}/templates/alertmanager.tmpl"
+#     mode: 0644
+#   register: _alertmanager_template
+
+- name: Start alertmanager container
+  docker_container:
+    name: alertmanager
+    image: "{{ alertmanager_docker_image }}"
+    hostname: "{{ alertmanager_hostname }}"
+    entrypoint:
+        - "/bin/alertmanager"
+        - "--config.file=/etc/alertmanager/alertmanager.yml"
+        - "--storage.path=/alertmanager"
+        # Everything above this line is copied from the alertmanager Dockerfile ENTRYPOINT. We need to duplicate this if we want to add any arguments.
+        # Cf. https://github.com/prometheus/prometheus/issues/3385
+        # Custom arguments:
+        - "--web.external-url={{ alertmanager_web_external_url }}"
+    # ports:
+    #   - "9093"
+    volumes:
+      - "{{ alertmanager_config_dir }}/alertmanager.yml:/etc/alertmanager/alertmanager.yml"
+      # - "{{ alertmanager_config_dir }}/templates:/etc/alertmanager/templates"
+    restart_policy: unless-stopped
+    # restart: "{{ _alertmanager_config.changed or _alertmanager_template.changed }}"
+    restart: "{{ _alertmanager_config is defined and _alertmanager_config.changed  }}"
+    networks:
+      - name: prometheus
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.alertmanager.rule: "{{ alertmanager_traefik_router_rule }}"
+      traefik.http.routers.alertmanager.entrypoints: "websecure"
+      traefik.http.routers.alertmanager.tls.certresolver: "letsencrypt"
+      traefik.http.routers.alertmanager.middlewares: "alertmanagerauth"
+      traefik.http.services.alertmanager.loadbalancer.server.port: "9093"
+      traefik.http.middlewares.alertmanagerauth.basicauth.users: "{{ alertmanager_basic_auth }}"
+      traefik.docker.network: prometheus
+
+- name: Set up matrix-alertmanager
+  docker_container:
+    image: "{{ alertmanager_matrix_docker_image }}"
+    name: matrix-alertmanager
+    env:
+      APP_PORT: "3000"
+      APP_ALERTMANAGER_SECRET: "{{ alertmanager_matrix_alertmanager_secret }}"
+      MATRIX_HOMESERVER_URL: "{{ alertmanager_matrix_homeserver_url }}"
+      MATRIX_USER: "{{ alertmanager_matrix_user }}"
+      MATRIX_TOKEN: "{{ alertmanager_matrix_alertmanager_token }}"
+      MATRIX_ROOMS: "{{ alertmanager_matrix_alertmanager_rooms }}"
+    restart_policy: unless-stopped
+    networks:
+      - name: prometheus
