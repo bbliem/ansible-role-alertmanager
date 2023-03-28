@@ -6,8 +6,8 @@ Ansible role for installing Prometheus Alertmanager
 
 ### General
 
-- `alertmanager_docker_image` [default: `prom/alertmanager:v0.21.0`]
-- `alertmanager_matrix_docker_image` [default: `jaywink/matrix-alertmanager:v0.5.0`]
+- `alertmanager_docker_image` [default: `prom/alertmanager:v0.25.0`]
+- `alertmanager_matrix_docker_image` [default: `jaywink/matrix-alertmanager:v0.7.0`]
 - `alertmanager_config_dir` [default: `/usr/local/etc/alertmanager`]
 - `alertmanager_hostname` [required]
 - `alertmanager_web_external_url` [default: `https://{{ alertmanager_hostname }}`]

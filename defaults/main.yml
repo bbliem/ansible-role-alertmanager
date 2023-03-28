@@ -1,5 +1,5 @@
 alertmanager_config_dir: /usr/local/etc/alertmanager
-alertmanager_docker_image: prom/alertmanager:v0.21.0
-alertmanager_matrix_docker_image: jaywink/matrix-alertmanager:v0.5.0
+alertmanager_docker_image: prom/alertmanager:v0.25.0
+alertmanager_matrix_docker_image: jaywink/matrix-alertmanager:v0.7.0
 alertmanager_traefik_router_rule: Host(`{{ alertmanager_hostname }}`)
 alertmanager_web_external_url: https://{{ alertmanager_hostname }}
